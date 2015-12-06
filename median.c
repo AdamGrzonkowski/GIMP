@@ -331,6 +331,10 @@ initialize_memory (guchar ***row,
   *outrow = g_new (guchar, num_bytes);  
 }
 
+// -------------------------- //
+//     Compares two numbers   //
+//    used in sort algorithm  //
+// -------------------------- //
 int compare_numbers (const void *a, const void *b)
 {
    const gint *da = (const gint *) a;
@@ -372,13 +376,13 @@ process_row (guchar **row,
             
           for (ii = 0; ii < 2 * InputValues.radius + 1; ii++)
             for (jj = left; jj <= right; jj++)
-              p_array[ii] = row[ii][channels * CLAMP (jj, 0, width - 1) + k]; //bierze wartosc piksela, CLAMP - obsługa krawędzi obraz
+              p_array[ii] = row[ii][channels * CLAMP (jj, 0, width - 1) + k]; //Assigns pixel value; CLAMP prevents going over image edges
             
-           //sortuje tablice 
+           // Sorts pixels and gets median value of the array
           qsort(p_array, ii, sizeof(gint), compare_numbers);
-          gint mid = floor(ii/2); //bierze wartosc srodkowa
+          gint mid = floor(ii/2);
  
-          //zwraca wartosc mediany
+          // Returns median value of the given neighour pixels
           if ((ii % 2) == 1 )
             outrow[channels * j + k] = p_array[mid+1];
           else
