@@ -14,7 +14,6 @@
 #include <libgimp/gimpui.h>
 #include <stdlib.h>
 #include <math.h>
-#include <glib.h>
 
 /* Structure required for handling GUI */
 typedef struct
