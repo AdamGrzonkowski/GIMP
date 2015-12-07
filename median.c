@@ -374,8 +374,8 @@ process_row (guchar **row,
           p_array = calloc(number_of_pixels, sizeof(gint));
           gint sum = 0;
             
-          for (ii = 0; ii < 2 * InputValues.radius + 1; ii++)
-            for (jj = left; jj <= right; jj++)
+          for (ii = 0; ii < 2 * InputValues.radius + 1; ii++) //for all tile rows in a given height
+            for (jj = left; jj <= right; jj++)                //process each tile row in a given width
               p_array[ii] = row[ii][channels * CLAMP (jj, 0, width - 1) + k]; //Assigns pixel value; CLAMP prevents going over image edges
             
            // Sorts pixels and gets median value of the array
