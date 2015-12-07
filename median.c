@@ -372,18 +372,20 @@ process_row (guchar **row,
       for (k = 0; k < channels; k++)
         {           
           p_array = calloc(number_of_pixels, sizeof(gint));
-          gint sum = 0;
+          gint array_elements = 0;
             
-          for (ii = 0; ii < 2 * InputValues.radius + 1; ii++) //for all tile rows in a given height
-            for (jj = left; jj <= right; jj++)                //process each tile row in a given width
-              p_array[ii] = row[ii][channels * CLAMP (jj, 0, width - 1) + k]; //Assigns pixel value; CLAMP prevents going over image edges
-            
+          for (ii = 0; ii < 2 * InputValues.radius + 1; ii++)  //for all tile rows in a given height
+            for (jj = left; jj <= right; jj++)                 //process each tile row in a given width
+            { 
+              p_array[array_elements] = row[ii][channels * CLAMP (jj, 0, width - 1) + k]; //Assigns pixel value; CLAMP prevents going over image edges
+              array_elements = array_elements + 1;
+            }
            // Sorts pixels and gets median value of the array
-          qsort(p_array, ii, sizeof(gint), compare_numbers);
-          gint mid = floor(ii/2);
+          qsort(p_array, array_elements, sizeof(gint), compare_numbers);
+          gint mid = floor(array_elements/2);
  
           // Returns median value of the given neighour pixels
-          if ((ii % 2) == 1 )
+          if ((array_elements % 2) == 1 )
             outrow[channels * j + k] = p_array[mid+1];
           else
             outrow[channels * j + k] = (p_array[mid]+p_array[mid+1])/2; 
