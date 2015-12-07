@@ -254,7 +254,7 @@ median (GimpDrawable *drawable,
   // Allocate memory for input and output tile rows 
   initialize_memory (&row, &outrow, width * channels);
 
-  // Gets pixels into the input rows: from (x,y) to (x+width-1,y)
+  // Gets pixels into the input rows from (2r+1)*(2r+1) matrix. ii - controls height
   for (ii = -InputValues.radius; ii <= InputValues.radius; ii++)
     {
       gimp_pixel_rgn_get_row (&rgn_in,
