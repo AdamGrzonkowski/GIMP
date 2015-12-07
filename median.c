@@ -39,14 +39,10 @@ static void median      (GimpDrawable     *drawable,
 static void initialize_memory    (guchar         ***row,
                                   guchar          **outrow,
                                   gint              num_bytes);
-static void process_row (guchar          **row,
+static void handle_row (guchar          **row,
                          guchar           *outrow,
-                         gint              x1,
-                         gint              y1,
                          gint              width,
-                         gint              height,
-                         gint              channels,
-                         gint              i);
+                         gint              channels);
 
 static int compare_numbers (const void *a, const void *b);
 
@@ -266,12 +262,10 @@ median (GimpDrawable *drawable,
   // To be done for each tile row
   for (i = 0; i < height; i++)
     {
-      process_row (row,
+      handle_row  (row,
                    outrow,
-                   x1, y1,
-                   width, height,
-                   channels,
-                   i);
+                   width,
+                   channels);
       // Sets pixels into to the output row
       gimp_pixel_rgn_set_row (&rgn_out,
                               outrow,
@@ -348,14 +342,10 @@ int compare_numbers (const void *a, const void *b)
 //    Process each tile row   //
 // -------------------------- //
 static void
-process_row (guchar **row,
+handle_row (guchar **row,
              guchar  *outrow,
-             gint     x1,
-             gint     y1,
              gint     width,
-             gint     height,
-             gint     channels,
-             gint     i)
+             gint     channels)
 {
   gint j;
   gint *p_array;
