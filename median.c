@@ -417,6 +417,7 @@ shuffle_tile_rows (GimpPixelRgn *rgn_in,
   inputRow[2 * UserInputValues.radius] = tmp_inputRow;
 }
 
+
 // -------------------------- //
 //    Dialog window config    //
 // -------------------------- //
@@ -446,44 +447,52 @@ median_dialog (GimpDrawable *drawable)
                             GTK_STOCK_OK,     GTK_RESPONSE_OK,
                             NULL); 
   
-  // Set vertical container box and add the hooked dialog widget to it
+  // Set vertical container main_vbox and add the hooked dialog widget to it
   main_vbox = gtk_vbox_new (FALSE, 6);   
   gtk_container_add (GTK_CONTAINER (GTK_DIALOG (dialog)->vbox), main_vbox);
-  gtk_widget_show (main_vbox);  // show widghet
+  gtk_widget_show (main_vbox); // show box
 
+  // Create preview widget for drawable and add it to main_vbox
   preview = gimp_drawable_preview_new (drawable, &UserInputValues.preview);
   gtk_box_pack_start (GTK_BOX (main_vbox), preview, TRUE, TRUE, 0);
-  gtk_widget_show (preview);
+  gtk_widget_show (preview); // show preview
 
+  // Create frame and add it to main_vbox
   frame = gtk_frame_new (NULL);
   gtk_widget_show (frame);
   gtk_box_pack_start (GTK_BOX (main_vbox), frame, TRUE, TRUE, 0);
   gtk_container_set_border_width (GTK_CONTAINER (frame), 6);
 
+  // Set padding 
   alignment = gtk_alignment_new (0.5, 0.5, 1, 1);
   gtk_widget_show (alignment);
   gtk_container_add (GTK_CONTAINER (frame), alignment);
   gtk_alignment_set_padding (GTK_ALIGNMENT (alignment), 6, 6, 6, 6);
 
+  // Create new horizontal box
   main_hbox = gtk_hbox_new (FALSE, 0);
   gtk_widget_show (main_hbox);
   gtk_container_add (GTK_CONTAINER (alignment), main_hbox);
 
+  // Create label for spin button to set radius
   radius_label = gtk_label_new_with_mnemonic ("_Promień:");
   gtk_widget_show (radius_label);
   gtk_box_pack_start (GTK_BOX (main_hbox), radius_label, FALSE, FALSE, 6);
   gtk_label_set_justify (GTK_LABEL (radius_label), GTK_JUSTIFY_RIGHT);
 
+  // Add spin button to allow setting radius and hook it to UserInputValues
   spinbutton = gimp_spin_button_new (&spinbutton_adj, UserInputValues.radius, 
-                                     1, 20, 1, 1, 1, 5, 0);
+                                     1, 30, 1, 1, 1, 5, 0);
   gtk_box_pack_start (GTK_BOX (main_hbox), spinbutton, FALSE, FALSE, 0);
   gtk_widget_show (spinbutton);
 
+  // Add label to the previously created frame
   frame_label = gtk_label_new ("<b>Zmień promień</b>");
   gtk_widget_show (frame_label);
   gtk_frame_set_label_widget (GTK_FRAME (frame), frame_label);
   gtk_label_set_use_markup (GTK_LABEL (frame_label), TRUE);
 
+  // Show preview on the selected area of image
   g_signal_connect_swapped (preview, "invalidated",
                             G_CALLBACK (median),
                             drawable);
@@ -491,15 +500,19 @@ median_dialog (GimpDrawable *drawable)
                             G_CALLBACK (gimp_preview_invalidate),
                             preview);
 
+  // Call to median with dialog info
   median (drawable, GIMP_PREVIEW (preview));
 
+  // Change preview on radius change
   g_signal_connect (spinbutton_adj, "value_changed",
                     G_CALLBACK (gimp_int_adjustment_update),
                     &UserInputValues.radius);
-  gtk_widget_show (dialog);
+  gtk_widget_show (dialog); // Show the entire dialog window
 
+  // Keep running until OK button is pressed
   run = (gimp_dialog_run (GIMP_DIALOG (dialog)) == GTK_RESPONSE_OK);
 
+  // Destroy window
   gtk_widget_destroy (dialog);
 
   return run;
