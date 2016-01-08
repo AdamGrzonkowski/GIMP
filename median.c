@@ -20,8 +20,8 @@ typedef struct
 {
   gint     radius;
   gboolean preview;
-  gint lessThan;
-  gint greaterThan;
+  gint     lessThan;
+  gint     greaterThan;
 } MedianInputValues;
 
 
@@ -38,13 +38,13 @@ static void run         (const gchar      *name,
 static void median      (GimpDrawable     *drawable,
                          GimpPreview      *preview);
 
-static void initializeMemory     (guchar         ***inputRow,
-                                  guchar          **outputRow,
-                                  gint              num_bytes);
-static void handleInputRow  (guchar           **inputRow,
-                              guchar           *outputRow,
-                              gint              width,
-                              gint              channels);
+static void initializeMemory  (guchar         ***inputRow,
+                               guchar          **outputRow,
+                               gint              num_bytes);
+static void handleInputRow    (guchar           **inputRow,
+                               guchar           *outputRow,
+                               gint              width,
+                               gint              channels);
 
 static gint compareNumbers (const void *a, const void *b);
 
@@ -66,8 +66,8 @@ static MedianInputValues UserInputValues =
 {
   2,     // radius = 2
   1,     // enable preview 
-  0,
-  0
+  0,     // default lessThan filtering variant value
+  0      // default greaterThan filtering variant value
 };
 
 /* Standard GIMP structure */
@@ -541,11 +541,12 @@ medianDialog (GimpDrawable *drawable)
   gtk_frame_set_label_widget (GTK_FRAME (frame), frame_label);
   gtk_label_set_use_markup (GTK_LABEL (frame_label), TRUE);
 
-  // Sets two fields to limit median point
+  // Get values required for gimp_coordinates_new()
   image_id = gimp_item_get_image (drawable->drawable_id);
   unit = gimp_image_get_unit (image_id);
   gimp_image_get_resolution (image_id, &xres, &yres);
 
+  // Sets two fields to enable median filtering variations
   sizeentry = gimp_coordinates_new (unit, "%a", TRUE, TRUE, 6,
                                     GIMP_SIZE_ENTRY_UPDATE_SIZE,
                                     TRUE, FALSE,
@@ -559,7 +560,6 @@ medianDialog (GimpDrawable *drawable)
                                     UserInputValues.greaterThan, yres,
                                     0, 255,
                                     0, 255);
-
   gtk_box_pack_start (GTK_BOX (main_hbox), sizeentry, FALSE, FALSE, 0);
   gtk_widget_show (sizeentry);
 
@@ -570,24 +570,26 @@ medianDialog (GimpDrawable *drawable)
   g_signal_connect_swapped (spinbutton_adj, "value_changed",
                             G_CALLBACK (gimp_preview_invalidate),
                             preview);
+  gtk_widget_show (dialog);
  
+  // Handle parameters updates accordingly to changes in GUI
   g_signal_connect (sizeentry, "value-changed",
                     G_CALLBACK (updatePixelSize),
                     preview);
   g_signal_connect (sizeentry, "refval-changed",
                     G_CALLBACK (updatePixelSize),
                     preview);
+  g_signal_connect (spinbutton_adj, "value_changed",
+                    G_CALLBACK (gimp_int_adjustment_update),
+                    &UserInputValues.radius);
+  gtk_widget_show (dialog); // Show the entire dialog window
 
-  gtk_widget_show (dialog);
 
   // Call to median with dialog info
   median (drawable, GIMP_PREVIEW (preview));
 
   // Change preview on radius change
-  g_signal_connect (spinbutton_adj, "value_changed",
-                    G_CALLBACK (gimp_int_adjustment_update),
-                    &UserInputValues.radius);
-  gtk_widget_show (dialog); // Show the entire dialog window
+
 
   // Keep running until OK button is pressed
   run = (gimp_dialog_run (GIMP_DIALOG (dialog)) == GTK_RESPONSE_OK);
@@ -614,4 +616,3 @@ updatePixelSize  (GimpSizeEntry *sizeentry,
                                                   1);
   gimp_preview_invalidate (preview);
 }
-
