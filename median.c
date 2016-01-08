@@ -56,10 +56,10 @@ static void shuffle_tile_rows     (GimpPixelRgn     *rgn_in,
                          gint              height,
                          gint              ypos);
 
-static gboolean median_dialog (GimpDrawable *drawable);
+static gboolean medianDialog (GimpDrawable *drawable);
 
-static void      update_pixelsize  (GimpSizeEntry *sizeentry,
-                                    GimpPreview   *preview);
+static void updatePixelSize  (GimpSizeEntry *sizeentry,
+                              GimpPreview   *preview);
 
 /* Set up default values of GUI options */
 static MedianInputValues UserInputValues =
@@ -162,7 +162,7 @@ run (const gchar      *name,
     {
     case GIMP_RUN_INTERACTIVE:
       gimp_get_data ("plug-in-median", &UserInputValues); // Get last chosen options in plug-in's GUI
-      if (! median_dialog (drawable))		          // Display the dialog window
+      if (! medianDialog (drawable))		          // Display the dialog window
         return;
       break;
 
@@ -401,21 +401,21 @@ handleInputRow (guchar **inputRow,
           // Check variants of filtering
 	  if (UserInputValues.lessThan != 0 && UserInputValues.greaterThan == 0)
 	  {
-             if (middlePixel <= (result - UserInputValues.lessThan))
+             if (middlePixel <= (medianResult - UserInputValues.lessThan))
              	result = medianResult;
              else
                 result = middlePixel;
           }
           else if (UserInputValues.lessThan == 0 && UserInputValues.greaterThan != 0)
           {
-             if (middlePixel >= (result + UserInputValues.lessThan))
+             if (middlePixel >= (medianResult + UserInputValues.greaterThan))
              	result = medianResult;
              else
                 result = middlePixel;
           }
 	  else if (UserInputValues.lessThan != 0 && UserInputValues.greaterThan != 0)
           {
-             if (middlePixel >= (result + UserInputValues.lessThan) && middlePixel <= (result - UserInputValues.lessThan))
+             if (middlePixel >= (medianResult + UserInputValues.greaterThan) && middlePixel <= (medianResult - UserInputValues.lessThan))
              	result = medianResult;
              else
                 result = middlePixel;
@@ -465,7 +465,7 @@ shuffle_tile_rows (GimpPixelRgn *rgn_in,
 //    Dialog window config    //
 // -------------------------- //
 static gboolean
-median_dialog (GimpDrawable *drawable)
+medianDialog (GimpDrawable *drawable)
 {
   GtkWidget *dialog;
   GtkWidget *main_vbox;
@@ -563,20 +563,19 @@ median_dialog (GimpDrawable *drawable)
   gtk_box_pack_start (GTK_BOX (main_hbox), sizeentry, FALSE, FALSE, 0);
   gtk_widget_show (sizeentry);
 
-  // Show preview on the selected area of image
+  // Adjust preview accordingly to user input
   g_signal_connect_swapped (preview, "invalidated",
                             G_CALLBACK (median),
                             drawable);
   g_signal_connect_swapped (spinbutton_adj, "value_changed",
                             G_CALLBACK (gimp_preview_invalidate),
                             preview);
-
-  
+ 
   g_signal_connect (sizeentry, "value-changed",
-                    G_CALLBACK (update_pixelsize),
+                    G_CALLBACK (updatePixelSize),
                     preview);
   g_signal_connect (sizeentry, "refval-changed",
-                    G_CALLBACK (update_pixelsize),
+                    G_CALLBACK (updatePixelSize),
                     preview);
 
   gtk_widget_show (dialog);
@@ -605,7 +604,7 @@ median_dialog (GimpDrawable *drawable)
 //  provided by user in GUI   //
 // -------------------------- //
 static void
-update_pixelsize (GimpSizeEntry *sizeentry,
+updatePixelSize  (GimpSizeEntry *sizeentry,
                   GimpPreview   *preview)
 {
   UserInputValues.lessThan  = gimp_size_entry_get_refval (GIMP_SIZE_ENTRY (sizeentry),
