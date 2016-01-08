@@ -480,6 +480,7 @@ medianDialog (GimpDrawable *drawable)
   GtkObject *pixel_adj;
   GtkWidget *frame_label;
   GtkWidget *sizeentry;
+  GtkWidget *hints;
   guint32    image_id;
   GimpUnit   unit;
   gdouble    xres, yres;
@@ -505,6 +506,10 @@ medianDialog (GimpDrawable *drawable)
   preview = gimp_drawable_preview_new (drawable, &UserInputValues.preview);
   gtk_box_pack_start (GTK_BOX (main_vbox), preview, TRUE, TRUE, 0);
   gtk_widget_show (preview); // show preview
+
+  // Display hint for a user
+  hints = gimp_hint_box_new ("UWAGA!\nDziałanie filtru dla promienia x>3 \nmoże być wolne.");
+  gtk_box_pack_end (GTK_BOX (main_vbox), hints, FALSE, FALSE, 0);
 
   // Create frame and add it to main_vbox
   frame = gtk_frame_new (NULL);
@@ -546,7 +551,7 @@ medianDialog (GimpDrawable *drawable)
   unit = gimp_image_get_unit (image_id);
   gimp_image_get_resolution (image_id, &xres, &yres);
 
-  // Sets two fields to enable median filtering variations
+  // Set two fields to enable median filtering variations
   sizeentry = gimp_coordinates_new (unit, "%a", TRUE, TRUE, 6,
                                     GIMP_SIZE_ENTRY_UPDATE_SIZE,
                                     TRUE, FALSE,
@@ -563,13 +568,16 @@ medianDialog (GimpDrawable *drawable)
   gtk_box_pack_start (GTK_BOX (main_hbox), sizeentry, FALSE, FALSE, 0);
   gtk_widget_show (sizeentry);
 
-  // Adjust preview accordingly to user input
+  // Adjust dialog accordingly to user input
   g_signal_connect_swapped (preview, "invalidated",
                             G_CALLBACK (median),
                             drawable);
   g_signal_connect_swapped (spinbutton_adj, "value_changed",
                             G_CALLBACK (gimp_preview_invalidate),
                             preview);
+  g_signal_connect_swapped (spinbutton_adj, "value_changed",
+                            G_CALLBACK (gtk_widget_show),
+                            hints);
   gtk_widget_show (dialog);
  
   // Handle parameters updates accordingly to changes in GUI
@@ -587,9 +595,6 @@ medianDialog (GimpDrawable *drawable)
 
   // Call to median with dialog info
   median (drawable, GIMP_PREVIEW (preview));
-
-  // Change preview on radius change
-
 
   // Keep running until OK button is pressed
   run = (gimp_dialog_run (GIMP_DIALOG (dialog)) == GTK_RESPONSE_OK);
