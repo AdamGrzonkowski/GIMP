@@ -20,6 +20,8 @@ typedef struct
 {
   gint     radius;
   gboolean preview;
+  gint lessThan;
+  gint greaterThan;
 } MedianInputValues;
 
 
@@ -56,11 +58,16 @@ static void shuffle_tile_rows     (GimpPixelRgn     *rgn_in,
 
 static gboolean median_dialog (GimpDrawable *drawable);
 
+static void      update_pixelsize  (GimpSizeEntry *sizeentry,
+                                    GimpPreview   *preview);
+
 /* Set up default values of GUI options */
 static MedianInputValues UserInputValues =
 {
   2,     // radius = 2
-  1      // enable preview 
+  1,     // enable preview 
+  0,
+  0
 };
 
 /* Standard GIMP structure */
@@ -71,6 +78,7 @@ GimpPlugInInfo PLUG_IN_INFO =
   query,
   run
 };
+
 
 /* Initializes arguments, calls PLUG_IN_INFO, 
    sets communication between plug-in & PDB */
@@ -229,7 +237,7 @@ median (GimpDrawable *drawable,
   // Get number of channels for the specified drawable (returns bytes per pixel)
   channels = gimp_drawable_bpp (drawable->drawable_id);
 
-  /* Allocate a big enough tile cache. Tile has size of 64x64 pixels. 
+  /* Allocate a big enough tile cache.
      Multiply *2 because of also processing shadow tiles
      Increases performance significantly */ 
   gimp_tile_cache_ntiles (2 * (drawable->width / gimp_tile_width() + 1));
@@ -353,6 +361,8 @@ handleInputRow (guchar **inputRow,
   gint j;
   gint numberOfPixels = 4 * UserInputValues.radius * UserInputValues.radius + 4 * UserInputValues.radius + 1;  //(2r+1)x(2r+1)
   gint *pixelsArray = g_new (gint, numberOfPixels);  // Allocate enough memory for local array of pixels
+  gint result = 0;
+  gint medianResult = 0;
 
   for (j = 0; j < width; j++)    // For the whole inputRow
     {
@@ -373,15 +383,48 @@ handleInputRow (guchar **inputRow,
               pixelsArray[index] = inputRow[ii][channels * CLAMP (jj, 0, width - 1) + k]; 
               index += 1;
             }
+
+          // Gets the currently worked on pixel
+          gint middlePosition = floor(numberOfPixels / 2); 
+          gint middlePixel = pixelsArray[middlePosition];
+
            // Sorts pixels and gets median value of the array
           qsort(pixelsArray, numberOfPixels, sizeof(gint), compareNumbers);
           gint mid = floor(numberOfPixels / 2);
  
           // Returns median value of the given neighbour pixels
           if ((numberOfPixels % 2) == 1 )
-            outputRow[channels * j + k] = pixelsArray[mid+1];
+            medianResult = pixelsArray[mid+1];
           else
-            outputRow[channels * j + k] = (pixelsArray[mid] + pixelsArray[mid+1]) / 2;  
+            medianResult = (pixelsArray[mid] + pixelsArray[mid+1]) / 2;
+
+          // Check variants of filtering
+	  if (UserInputValues.lessThan != 0 && UserInputValues.greaterThan == 0)
+	  {
+             if (middlePixel <= (result - UserInputValues.lessThan))
+             	result = medianResult;
+             else
+                result = middlePixel;
+          }
+          else if (UserInputValues.lessThan == 0 && UserInputValues.greaterThan != 0)
+          {
+             if (middlePixel >= (result + UserInputValues.lessThan))
+             	result = medianResult;
+             else
+                result = middlePixel;
+          }
+	  else if (UserInputValues.lessThan != 0 && UserInputValues.greaterThan != 0)
+          {
+             if (middlePixel >= (result + UserInputValues.lessThan) && middlePixel <= (result - UserInputValues.lessThan))
+             	result = medianResult;
+             else
+                result = middlePixel;
+          }
+          else
+	     result = medianResult;
+
+          // Return result of median filtering
+          outputRow[channels * j + k] = result;  
         }
     }
   g_free(pixelsArray); // Free memomy of local array
@@ -427,13 +470,19 @@ median_dialog (GimpDrawable *drawable)
   GtkWidget *dialog;
   GtkWidget *main_vbox;
   GtkWidget *main_hbox;
+  GtkWidget *second_hbox;
   GtkWidget *preview;
   GtkWidget *frame;
   GtkWidget *radius_label;
   GtkWidget *alignment;
   GtkWidget *spinbutton;
   GtkObject *spinbutton_adj;
+  GtkObject *pixel_adj;
   GtkWidget *frame_label;
+  GtkWidget *sizeentry;
+  guint32    image_id;
+  GimpUnit   unit;
+  gdouble    xres, yres;
   gboolean   run;
 
   gimp_ui_init ("median", FALSE);  // initialise GTK+, does all the magic so the 
@@ -492,6 +541,28 @@ median_dialog (GimpDrawable *drawable)
   gtk_frame_set_label_widget (GTK_FRAME (frame), frame_label);
   gtk_label_set_use_markup (GTK_LABEL (frame_label), TRUE);
 
+  // Sets two fields to limit median point
+  image_id = gimp_item_get_image (drawable->drawable_id);
+  unit = gimp_image_get_unit (image_id);
+  gimp_image_get_resolution (image_id, &xres, &yres);
+
+  sizeentry = gimp_coordinates_new (unit, "%a", TRUE, TRUE, 6,
+                                    GIMP_SIZE_ENTRY_UPDATE_SIZE,
+                                    TRUE, FALSE,
+
+                                    ("x<"),
+                                    UserInputValues.lessThan, xres,
+                                    0, 255,
+                                    0, 255,
+
+                                    ("x>"),
+                                    UserInputValues.greaterThan, yres,
+                                    0, 255,
+                                    0, 255);
+
+  gtk_box_pack_start (GTK_BOX (main_hbox), sizeentry, FALSE, FALSE, 0);
+  gtk_widget_show (sizeentry);
+
   // Show preview on the selected area of image
   g_signal_connect_swapped (preview, "invalidated",
                             G_CALLBACK (median),
@@ -499,6 +570,16 @@ median_dialog (GimpDrawable *drawable)
   g_signal_connect_swapped (spinbutton_adj, "value_changed",
                             G_CALLBACK (gimp_preview_invalidate),
                             preview);
+
+  
+  g_signal_connect (sizeentry, "value-changed",
+                    G_CALLBACK (update_pixelsize),
+                    preview);
+  g_signal_connect (sizeentry, "refval-changed",
+                    G_CALLBACK (update_pixelsize),
+                    preview);
+
+  gtk_widget_show (dialog);
 
   // Call to median with dialog info
   median (drawable, GIMP_PREVIEW (preview));
@@ -516,5 +597,22 @@ median_dialog (GimpDrawable *drawable)
   gtk_widget_destroy (dialog);
 
   return run;
+}
+
+
+// -------------------------- //
+//  Updates the pixel values  //
+//  provided by user in GUI   //
+// -------------------------- //
+static void
+update_pixelsize (GimpSizeEntry *sizeentry,
+                  GimpPreview   *preview)
+{
+  UserInputValues.lessThan  = gimp_size_entry_get_refval (GIMP_SIZE_ENTRY (sizeentry),
+                                                  0);
+
+  UserInputValues.greaterThan = gimp_size_entry_get_refval (GIMP_SIZE_ENTRY (sizeentry),
+                                                  1);
+  gimp_preview_invalidate (preview);
 }
 
