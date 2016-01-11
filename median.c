@@ -15,6 +15,7 @@
 #include <libgimp/gimpui.h> // For application UI functions
 #include <math.h>           // Required only for floor()
 
+
 /* Structure required for handling GUI */
 typedef struct
 {
@@ -28,27 +29,29 @@ typedef struct
 // --------------------- //
 // FUNCTION DECLARATIONS //
 // --------------------- //
-static void query       (void);
-static void run         (const gchar      *name,
+static inline void query       (void);
+static inline void run         (const gchar      *name,
                          gint              numberOfInputParams,
                          const GimpParam  *inputValues,
                          gint             *numberOfOutputParams,
                          GimpParam       **returnValues);
 
-static void median      (GimpDrawable     *drawable,
+static inline void median      (GimpDrawable     *drawable,
                          GimpPreview      *preview);
 
-static void initializeMemory  (guchar         ***inputRow,
+static inline void initializeMemory  (guchar         ***inputRow,
                                guchar          **outputRow,
                                gint              num_bytes);
-static void handleInputRow    (guchar           **inputRow,
+static inline void handleInputRow    (guchar           **inputRow,
                                guchar           *outputRow,
                                gint              width,
                                gint              channels);
 
-static gint compareNumbers (const void *a, const void *b);
+static inline gint compareNumbers (const void *a, const void *b);
 
-static void shuffle_tile_rows     (GimpPixelRgn     *rgn_in,
+static inline void heapSort (gint [], gint);
+
+static inline void shuffle_tile_rows     (GimpPixelRgn     *rgn_in,
                          guchar          **inputRow,
                          gint              x1,
                          gint              y1,
@@ -56,9 +59,9 @@ static void shuffle_tile_rows     (GimpPixelRgn     *rgn_in,
                          gint              height,
                          gint              ypos);
 
-static gboolean medianDialog (GimpDrawable *drawable);
+static inline gboolean medianDialog (GimpDrawable *drawable);
 
-static void updatePixelSize  (GimpSizeEntry *sizeentry,
+static inline void updatePixelSize  (GimpSizeEntry *sizeentry,
                               GimpPreview   *preview);
 
 /* Set up default values of GUI options */
@@ -88,7 +91,7 @@ MAIN()
 // ------------------------- //
 //  Register plug-in in PDB  //
 // ------------------------- //
-static void 
+static inline void 
 query (void)
 {
   /* Standard input parameters definitions */
@@ -135,7 +138,7 @@ query (void)
 // --------------------- //
 // Plug-in core function //
 // --------------------- //
-static void
+static inline void
 run (const gchar      *name,
      gint              numberOfInputParams,
      const GimpParam  *inputValues,
@@ -198,7 +201,7 @@ run (const gchar      *name,
 // --------------------- //
 //    Median filtering   //
 // --------------------- //
-static void
+static inline void
 median (GimpDrawable *drawable,
         GimpPreview  *preview)
 {
@@ -317,7 +320,7 @@ median (GimpDrawable *drawable,
 // Allocates memory for input //
 //       and output rows      //
 // -------------------------- //
-static void
+static inline void
 initializeMemory (guchar ***inputRow,
           guchar  **outputRow,
           gint      num_bytes)
@@ -336,11 +339,13 @@ initializeMemory (guchar ***inputRow,
   *outputRow = g_new (guchar, num_bytes);  
 }
 
+
 // -------------------------- //
 //     Compares two numbers   //
 //    used in sort algorithm  //
 // -------------------------- //
-gint compareNumbers (const void *a, const void *b)
+static inline gint 
+compareNumbers (const void *a, const void *b)
 {
    const gint *da = (const gint *) a;
    const gint *db = (const gint *) b;
@@ -349,10 +354,53 @@ gint compareNumbers (const void *a, const void *b)
 }
 
 
+// -------------------------- //
+//    Sorts the given array   //
+//  using Heapsort algorithm  //
+// in time O(n), memory O(1)  //
+// -------------------------- //
+static inline void 
+heapSort(gint array[], gint N) 
+{
+  gint n = N, i = n/2, parent, child;
+  gint t;
+  //
+  for (;;) { 		   // Loops until array is sorted 
+    if (i > 0) { 	   // First stage - Sorting the heap 
+      i--;                 // Save its index to i 
+      t = array[i];        // Save parent value to t 
+    } else {               // Second stage - Extracting elements in-place 
+      n--;                 // Make the new heap smaller 
+      if (n == 0) return;  // When the heap is empty, we are done 
+      t = array[n];        // Save last value (it will be overwritten) 
+      array[n] = array[0]; // Save largest value at the end of array
+    }
+ 
+    parent = i;            // We will start pushing down t from parent
+    child = i*2 + 1;       // parent's left child
+ 
+    // Sift operation - pushing the value of t down the heap
+    while (child < n) {
+      if (child + 1 < n  &&  array[child + 1] > array[child]) {
+	child++;                      // Choose the largest child
+      }
+      if (array[child] > t) {         // If any child is bigger than the parent
+	array[parent] = array[child]; // Move the largest child up
+	parent = child;               // Move parent pointer to this child
+	child = parent*2 + 1;         // Find the next child
+      } else {
+	break;                        // t's place is found
+      }
+    }
+    array[parent] = t;                // We save t in the heap
+  }
+}
+
+
 // ------------------------------ //
 //   Process each tile inputRow   //
 // ------------------------------ //
-static void
+static inline void
 handleInputRow (guchar **inputRow,
              guchar  *outputRow,
              gint     width,
@@ -388,8 +436,9 @@ handleInputRow (guchar **inputRow,
           gint middlePosition = floor(numberOfPixels / 2); 
           gint middlePixel = pixelsArray[middlePosition];
 
-           // Sorts pixels and gets median value of the array
-          qsort(pixelsArray, numberOfPixels, sizeof(gint), compareNumbers);
+          // Sorts pixels and gets median value of the array
+	  //heapSort(pixelsArray, numberOfPixels); // for img 512x512px & r=10, t=30,71s
+          qsort(pixelsArray, numberOfPixels, sizeof(gint), compareNumbers); // for img 512x512px & r=10, t=23,45s
           gint mid = floor(numberOfPixels / 2);
  
           // Returns median value of the given neighbour pixels
@@ -435,7 +484,7 @@ handleInputRow (guchar **inputRow,
 //   Shifts tile rows to put  //
 //   the new one at the end   //
 // -------------------------- //
-static void
+static inline void
 shuffle_tile_rows (GimpPixelRgn *rgn_in,
          guchar      **inputRow,
          gint          x1,
@@ -464,7 +513,7 @@ shuffle_tile_rows (GimpPixelRgn *rgn_in,
 // -------------------------- //
 //    Dialog window config    //
 // -------------------------- //
-static gboolean
+static inline gboolean
 medianDialog (GimpDrawable *drawable)
 {
   GtkWidget *dialog;
@@ -508,7 +557,7 @@ medianDialog (GimpDrawable *drawable)
   gtk_widget_show (preview); // show preview
 
   // Display hint for a user
-  hints = gimp_hint_box_new ("UWAGA!\nDziałanie filtru dla promienia x>3 \nmoże być wolne.");
+  hints = gimp_hint_box_new ("UWAGA!\nDziałanie filtru dla promienia r>5 \nmoże być wolne.");
   gtk_box_pack_end (GTK_BOX (main_vbox), hints, FALSE, FALSE, 0);
 
   // Create frame and add it to main_vbox
@@ -541,7 +590,7 @@ medianDialog (GimpDrawable *drawable)
   gtk_widget_show (spinbutton);
 
   // Add label to the previously created frame
-  frame_label = gtk_label_new ("<b>Zmień promień</b>");
+  frame_label = gtk_label_new ("<b>Zmień ustawienia</b>");
   gtk_widget_show (frame_label);
   gtk_frame_set_label_widget (GTK_FRAME (frame), frame_label);
   gtk_label_set_use_markup (GTK_LABEL (frame_label), TRUE);
@@ -556,12 +605,12 @@ medianDialog (GimpDrawable *drawable)
                                     GIMP_SIZE_ENTRY_UPDATE_SIZE,
                                     TRUE, FALSE,
 
-                                    ("x<"),
+                                    ("     x<="),
                                     UserInputValues.lessThan, xres,
                                     0, 255,
                                     0, 255,
 
-                                    ("x>"),
+                                    ("     x>="),
                                     UserInputValues.greaterThan, yres,
                                     0, 255,
                                     0, 255);
@@ -610,7 +659,7 @@ medianDialog (GimpDrawable *drawable)
 //  Updates the pixel values  //
 //  provided by user in GUI   //
 // -------------------------- //
-static void
+static inline void
 updatePixelSize  (GimpSizeEntry *sizeentry,
                   GimpPreview   *preview)
 {
