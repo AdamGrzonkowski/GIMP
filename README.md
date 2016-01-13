@@ -1,2 +1,4 @@
 # GIMP
-Program for my engineering thesis.
+Plugin for my engineering thesis.
+
+Core written in C, GUI written in GTK+.
