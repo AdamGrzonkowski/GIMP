@@ -8,8 +8,6 @@
  *
  */
 
-//https://www.gimp.org/docs/plug-in/plug-in.html 
-
 /* Include libraries */
 #include <libgimp/gimp.h>   // For application logic functions
 #include <libgimp/gimpui.h> // For application UI functions
