@@ -8,6 +8,8 @@
  *
  */
 
+//https://www.gimp.org/docs/plug-in/plug-in.html 
+
 /* Include libraries */
 #include <libgimp/gimp.h>   // For application logic functions
 #include <libgimp/gimpui.h> // For application UI functions
@@ -21,6 +23,8 @@ typedef struct
   gboolean preview;
   gint     lessThan;
   gint     greaterThan;
+  gboolean button;
+  gboolean button2;
 } MedianInputValues;
 
 
@@ -68,7 +72,9 @@ static MedianInputValues UserInputValues =
   2,     // radius = 2
   1,     // enable preview 
   0,     // default lessThan filtering variant value
-  0      // default greaterThan filtering variant value
+  0,     // default greaterThan filtering variant value
+  FALSE,
+  FALSE
 };
 
 /* Standard GIMP structure */
@@ -446,23 +452,30 @@ handleInputRow (guchar **inputRow,
             medianResult = (pixelsArray[mid] + pixelsArray[mid+1]) / 2;
 
           // Check variants of filtering
-	  if (UserInputValues.lessThan != 0 && UserInputValues.greaterThan == 0)
+	  if (UserInputValues.lessThan != 0 && UserInputValues.greaterThan == 0 && UserInputValues.button && !UserInputValues.button2)
 	  {
-             if (middlePixel <= (medianResult - UserInputValues.lessThan))
+             if (middlePixel < (medianResult - UserInputValues.lessThan))
              	result = medianResult;
              else
                 result = middlePixel;
           }
-          else if (UserInputValues.lessThan == 0 && UserInputValues.greaterThan != 0)
+          else if (UserInputValues.lessThan == 0 && UserInputValues.greaterThan != 0 && !UserInputValues.button && UserInputValues.button2)
           {
-             if (middlePixel >= (medianResult + UserInputValues.greaterThan))
+             if (middlePixel > (medianResult + UserInputValues.greaterThan))
              	result = medianResult;
              else
                 result = middlePixel;
           }
-	  else if (UserInputValues.lessThan != 0 && UserInputValues.greaterThan != 0)
+	  else if (UserInputValues.lessThan != 0 && UserInputValues.greaterThan != 0 && !UserInputValues.button2 && !UserInputValues.button)
           {
-             if (middlePixel >= (medianResult + UserInputValues.greaterThan) && middlePixel <= (medianResult - UserInputValues.lessThan))
+             if (middlePixel >= (medianResult - UserInputValues.lessThan) && middlePixel <= (medianResult + UserInputValues.greaterThan))
+             	result = medianResult;
+             else
+                result = middlePixel;
+          }
+          else if (UserInputValues.lessThan != 0 && UserInputValues.greaterThan != 0 && UserInputValues.button2 && UserInputValues.button)
+          {
+             if (middlePixel < (medianResult - UserInputValues.lessThan) || middlePixel > (medianResult + UserInputValues.greaterThan))
              	result = medianResult;
              else
                 result = middlePixel;
@@ -520,17 +533,24 @@ medianDialog (GimpDrawable *drawable)
   GtkWidget *second_hbox;
   GtkWidget *preview;
   GtkWidget *frame;
+  GtkWidget *frame2;
   GtkWidget *radius_label;
   GtkWidget *alignment;
+  GtkWidget *alignment2;
   GtkWidget *spinbutton;
   GtkObject *spinbutton_adj;
-  GtkObject *pixel_adj;
+  GtkWidget *spinbutton2;
+  GtkWidget *spinbutton2_label;
+  GtkObject *spinbutton_adj2;
+  GtkWidget *spinbutton3;
+  GtkWidget *spinbutton3_label;
+  GtkWidget *spinbutton3_label2;
+  GtkObject *spinbutton_adj3;
   GtkWidget *frame_label;
-  GtkWidget *sizeentry;
+  GtkWidget *frame_label2;
   GtkWidget *hints;
-  guint32    image_id;
-  GimpUnit   unit;
-  gdouble    xres, yres;
+  GtkWidget *button;
+  GtkWidget *button2;
   gboolean   run;
 
   gimp_ui_init ("median", FALSE);  // initialise GTK+, does all the magic so the 
@@ -588,32 +608,71 @@ medianDialog (GimpDrawable *drawable)
   gtk_widget_show (spinbutton);
 
   // Add label to the previously created frame
-  frame_label = gtk_label_new ("<b>Zmień ustawienia</b>");
+  frame_label = gtk_label_new ("<b>Zmień promień</b>");
   gtk_widget_show (frame_label);
   gtk_frame_set_label_widget (GTK_FRAME (frame), frame_label);
   gtk_label_set_use_markup (GTK_LABEL (frame_label), TRUE);
 
-  // Get values required for gimp_coordinates_new()
-  image_id = gimp_item_get_image (drawable->drawable_id);
-  unit = gimp_image_get_unit (image_id);
-  gimp_image_get_resolution (image_id, &xres, &yres);
+  // Create frame and add it to main_vbox
+  frame2 = gtk_frame_new (NULL);
+  gtk_widget_show (frame2);
+  gtk_box_pack_start (GTK_BOX (main_vbox), frame2, TRUE, TRUE, 0);
+  gtk_container_set_border_width (GTK_CONTAINER (frame2), 6);
 
-  // Set two fields to enable median filtering variations
-  sizeentry = gimp_coordinates_new (unit, "%a", TRUE, TRUE, 6,
-                                    GIMP_SIZE_ENTRY_UPDATE_SIZE,
-                                    TRUE, FALSE,
+    // Set padding 
+  alignment2 = gtk_alignment_new (0.5, 0.5, 1, 1);
+  gtk_widget_show (alignment2);
+  gtk_container_add (GTK_CONTAINER (frame2), alignment2);
+  gtk_alignment_set_padding (GTK_ALIGNMENT (alignment2), 6, 6, 6, 6);
 
-                                    ("     x<="),
-                                    UserInputValues.lessThan, xres,
-                                    0, 255,
-                                    0, 255,
+  // Create new horizontal box to hold filter variants
+  second_hbox = gtk_hbox_new (FALSE, 0);
+  gtk_widget_show (second_hbox);
+  gtk_container_add (GTK_CONTAINER (alignment2), second_hbox);
 
-                                    ("     x>="),
-                                    UserInputValues.greaterThan, yres,
-                                    0, 255,
-                                    0, 255);
-  gtk_box_pack_start (GTK_BOX (main_hbox), sizeentry, FALSE, FALSE, 0);
-  gtk_widget_show (sizeentry);
+  // Create checkbox for variant filtering
+  button = gtk_check_button_new();
+  gtk_box_pack_start (GTK_BOX (second_hbox), button, FALSE, FALSE, 3);
+  gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (button),FALSE);
+
+  // Create spin button to set lessThan variable
+  spinbutton2_label = gtk_label_new_with_mnemonic ("_x < m -");
+  gtk_widget_show (spinbutton2_label);
+  gtk_box_pack_start (GTK_BOX (second_hbox), spinbutton2_label, FALSE, FALSE, 3);
+  gtk_label_set_justify (GTK_LABEL (spinbutton2_label), GTK_JUSTIFY_RIGHT);
+
+  spinbutton2 = gimp_spin_button_new (&spinbutton_adj2, UserInputValues.lessThan, 
+                                     0, 30, 1, 1, 1, 5, 0);
+  gtk_box_pack_start (GTK_BOX (second_hbox), spinbutton2, FALSE, FALSE, 0);
+  gtk_widget_show (spinbutton2); 
+
+  // Create spin button to set greaterThan variable
+  spinbutton3_label = gtk_label_new_with_mnemonic ("_<= x <= m +");
+  gtk_widget_show (spinbutton3_label);
+  gtk_box_pack_start (GTK_BOX (second_hbox), spinbutton3_label, FALSE, FALSE, 3);
+  gtk_label_set_justify (GTK_LABEL (spinbutton3_label), GTK_JUSTIFY_RIGHT);
+
+  spinbutton3 = gimp_spin_button_new (&spinbutton_adj3, UserInputValues.greaterThan, 
+                                     0, 30, 1, 1, 1, 5, 0);
+  gtk_box_pack_start (GTK_BOX (second_hbox), spinbutton3, FALSE, FALSE, 0);
+  gtk_widget_show (spinbutton3);
+
+  spinbutton3_label2 = gtk_label_new_with_mnemonic ("_< x");
+  gtk_widget_show (spinbutton3_label2);
+  gtk_box_pack_start (GTK_BOX (second_hbox), spinbutton3_label2, FALSE, FALSE, 3);
+  gtk_label_set_justify (GTK_LABEL (spinbutton3_label2), GTK_JUSTIFY_RIGHT);
+
+  // Create 2nd checkbox for variant filtering
+  button2 = gtk_check_button_new();
+  gtk_box_pack_start (GTK_BOX (second_hbox), button2, FALSE, FALSE, 3);
+  gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (button2),FALSE);
+
+
+  // Add label to the previously created frame2
+  frame_label2 = gtk_label_new ("<b>Filtrowanie wariantowe</b>");
+  gtk_widget_show (frame_label2);
+  gtk_frame_set_label_widget (GTK_FRAME (frame2), frame_label2);
+  gtk_label_set_use_markup (GTK_LABEL (frame_label2), TRUE);
 
   // Adjust dialog accordingly to user input
   g_signal_connect_swapped (preview, "invalidated",
@@ -625,20 +684,40 @@ medianDialog (GimpDrawable *drawable)
   g_signal_connect_swapped (spinbutton_adj, "value_changed",
                             G_CALLBACK (gtk_widget_show),
                             hints);
+  g_signal_connect_swapped (spinbutton_adj2, "value_changed",
+                            G_CALLBACK (gtk_widget_show),
+                            button);
+  g_signal_connect_swapped (spinbutton_adj3, "value_changed",
+                            G_CALLBACK (gtk_widget_show),
+                            button2);
+  g_signal_connect_swapped (spinbutton_adj2, "value_changed",
+                            G_CALLBACK (gimp_preview_invalidate),
+                            preview);
+  g_signal_connect_swapped (spinbutton_adj3, "value_changed",
+                            G_CALLBACK (gimp_preview_invalidate),
+                            preview);
   gtk_widget_show (dialog);
  
   // Handle parameters updates accordingly to changes in GUI
-  g_signal_connect (sizeentry, "value-changed",
-                    G_CALLBACK (updatePixelSize),
-                    preview);
-  g_signal_connect (sizeentry, "refval-changed",
-                    G_CALLBACK (updatePixelSize),
-                    preview);
   g_signal_connect (spinbutton_adj, "value_changed",
                     G_CALLBACK (gimp_int_adjustment_update),
                     &UserInputValues.radius);
+  g_signal_connect (button, "value_changed",
+                    G_CALLBACK (gimp_int_adjustment_update),
+                    &UserInputValues.radius);
+  g_signal_connect (button, "clicked",
+                    G_CALLBACK(gimp_toggle_button_update), 
+                    &UserInputValues.button);
+  g_signal_connect (button2, "clicked",
+                    G_CALLBACK (gimp_toggle_button_update),
+                    &UserInputValues.button2);
+  g_signal_connect (spinbutton_adj2, "value_changed",
+                    G_CALLBACK (gimp_int_adjustment_update),
+                    &UserInputValues.lessThan);
+  g_signal_connect (spinbutton_adj3, "value_changed",
+                    G_CALLBACK (gimp_int_adjustment_update),
+                    &UserInputValues.greaterThan);
   gtk_widget_show (dialog); // Show the entire dialog window
-
 
   // Call to median with dialog info
   median (drawable, GIMP_PREVIEW (preview));
@@ -650,21 +729,4 @@ medianDialog (GimpDrawable *drawable)
   gtk_widget_destroy (dialog);
 
   return run;
-}
-
-
-// -------------------------- //
-//  Updates the pixel values  //
-//  provided by user in GUI   //
-// -------------------------- //
-static inline void
-updatePixelSize  (GimpSizeEntry *sizeentry,
-                  GimpPreview   *preview)
-{
-  UserInputValues.lessThan  = gimp_size_entry_get_refval (GIMP_SIZE_ENTRY (sizeentry),
-                                                  0);
-
-  UserInputValues.greaterThan = gimp_size_entry_get_refval (GIMP_SIZE_ENTRY (sizeentry),
-                                                  1);
-  gimp_preview_invalidate (preview);
 }
