@@ -575,7 +575,7 @@ medianDialog (GimpDrawable *drawable)
   gtk_widget_show (preview); // show preview
 
   // Display hint for a user
-  hints = gimp_hint_box_new ("UWAGA!\nDziałanie filtru dla promienia r>5 \nmoże być wolne.");
+  hints = gimp_hint_box_new ("UWAGA!\nDziałanie filtru dla promienia r > 6 \nmoże być wolne.");
   gtk_box_pack_end (GTK_BOX (main_vbox), hints, FALSE, FALSE, 0);
 
   // Create frame and add it to main_vbox
@@ -633,7 +633,7 @@ medianDialog (GimpDrawable *drawable)
   // Create checkbox for variant filtering
   button = gtk_check_button_new();
   gtk_box_pack_start (GTK_BOX (second_hbox), button, FALSE, FALSE, 3);
-  gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (button),FALSE);
+  gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (button), UserInputValues.button);
 
   // Create spin button to set lessThan variable
   spinbutton2_label = gtk_label_new_with_mnemonic ("_x < m -");
@@ -642,7 +642,7 @@ medianDialog (GimpDrawable *drawable)
   gtk_label_set_justify (GTK_LABEL (spinbutton2_label), GTK_JUSTIFY_RIGHT);
 
   spinbutton2 = gimp_spin_button_new (&spinbutton_adj2, UserInputValues.lessThan, 
-                                     0, 30, 1, 1, 1, 5, 0);
+                                     0, 255, 1, 1, 1, 5, 0);
   gtk_box_pack_start (GTK_BOX (second_hbox), spinbutton2, FALSE, FALSE, 0);
   gtk_widget_show (spinbutton2); 
 
@@ -653,7 +653,7 @@ medianDialog (GimpDrawable *drawable)
   gtk_label_set_justify (GTK_LABEL (spinbutton3_label), GTK_JUSTIFY_RIGHT);
 
   spinbutton3 = gimp_spin_button_new (&spinbutton_adj3, UserInputValues.greaterThan, 
-                                     0, 30, 1, 1, 1, 5, 0);
+                                     0, 255, 1, 1, 1, 5, 0);
   gtk_box_pack_start (GTK_BOX (second_hbox), spinbutton3, FALSE, FALSE, 0);
   gtk_widget_show (spinbutton3);
 
@@ -665,7 +665,7 @@ medianDialog (GimpDrawable *drawable)
   // Create 2nd checkbox for variant filtering
   button2 = gtk_check_button_new();
   gtk_box_pack_start (GTK_BOX (second_hbox), button2, FALSE, FALSE, 3);
-  gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (button2),FALSE);
+  gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (button2), UserInputValues.button2);
 
 
   // Add label to the previously created frame2
