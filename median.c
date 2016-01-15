@@ -51,8 +51,6 @@ static inline void handleInputRow    (guchar           **inputRow,
 
 static inline gint compareNumbers (const void *a, const void *b);
 
-static inline void heapSort (gint [], gint);
-
 static inline void shuffle_tile_rows     (GimpPixelRgn     *rgn_in,
                          guchar          **inputRow,
                          gint              x1,
@@ -73,8 +71,8 @@ static MedianInputValues UserInputValues =
   1,     // enable preview 
   0,     // default lessThan filtering variant value
   0,     // default greaterThan filtering variant value
-  FALSE,
-  FALSE
+  FALSE, // set button filtering variant value to false
+  FALSE  // set button2 filtering variant value to false
 };
 
 /* Standard GIMP structure */
