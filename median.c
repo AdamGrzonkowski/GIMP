@@ -61,9 +61,6 @@ static inline void shuffle_tile_rows     (GimpPixelRgn     *rgn_in,
 
 static inline gboolean medianDialog (GimpDrawable *drawable);
 
-static inline void updatePixelSize  (GimpSizeEntry *sizeentry,
-                              GimpPreview   *preview);
-
 /* Set up default values of GUI options */
 static MedianInputValues UserInputValues =
 {
