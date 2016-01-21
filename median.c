@@ -411,7 +411,8 @@ handleInputRow (guchar **inputRow,
              gint     channels)
 {
   gint j;
-  gint numberOfPixels = 4 * UserInputValues.radius * UserInputValues.radius + 4 * UserInputValues.radius + 1;  //(2r+1)x(2r+1)
+  gint oneDimension = 2 * UserInputValues.radius + 1;
+  gint numberOfPixels = SQR(oneDimension);  //(2r+1)x(2r+1)
   gint *pixelsArray = g_new (gint, numberOfPixels);  // Allocate enough memory for local array of pixels
   gint result = 0;
   gint medianResult = 0;
