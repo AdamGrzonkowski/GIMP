@@ -438,13 +438,12 @@ handleInputRow (guchar **inputRow,
             }
 
           // Gets the currently worked on pixel
-          gint middlePosition = floor(numberOfPixels / 2); 
-          gint middlePixel = pixelsArray[middlePosition];
+          gint mid = floor(numberOfPixels / 2); 
+          gint middlePixel = pixelsArray[mid];
 
           // Sorts pixels and gets median value of the array
 	  //heapSort(pixelsArray, numberOfPixels); // for img 512x512px & r=10, t=30,71s
           qsort(pixelsArray, numberOfPixels, sizeof(gint), compareNumbers); // for img 512x512px & r=10, t=23,45s
-          gint mid = floor(numberOfPixels / 2);
  
           // Returns median value of the given neighbour pixels
           if ((numberOfPixels % 2) == 1 )
@@ -649,6 +648,7 @@ medianDialog (GimpDrawable *drawable)
   button = gtk_check_button_new();
   gtk_box_pack_start (GTK_BOX (second_hbox), button, FALSE, FALSE, 3);
   gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (button), UserInputValues.button);
+  gtk_widget_show (button);
 
   // Create spin button to set lessThan variable
   spinbutton2_label = gtk_label_new_with_mnemonic ("_x < m -");
@@ -681,7 +681,7 @@ medianDialog (GimpDrawable *drawable)
   button2 = gtk_check_button_new();
   gtk_box_pack_start (GTK_BOX (second_hbox), button2, FALSE, FALSE, 3);
   gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (button2), UserInputValues.button2);
-
+  gtk_widget_show (button2);
 
   // Add label to the previously created frame2
   frame_label2 = gtk_label_new ("<b>Filtrowanie wariantowe</b>");
@@ -699,12 +699,6 @@ medianDialog (GimpDrawable *drawable)
   g_signal_connect_swapped (spinbutton_adj, "value_changed",
                             G_CALLBACK (gtk_widget_show),
                             hints);
-  g_signal_connect_swapped (spinbutton_adj2, "value_changed",
-                            G_CALLBACK (gtk_widget_show),
-                            button);
-  g_signal_connect_swapped (spinbutton_adj3, "value_changed",
-                            G_CALLBACK (gtk_widget_show),
-                            button2);
   g_signal_connect_swapped (spinbutton_adj2, "value_changed",
                             G_CALLBACK (gimp_preview_invalidate),
                             preview);
